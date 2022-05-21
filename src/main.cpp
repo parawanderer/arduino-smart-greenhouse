@@ -8,6 +8,8 @@
 
 #include "StateManager.h"
 #include "DisplayManager.h"
+#include "InteractivityManager.h"
+#include "DataManager.h"
 #include "PotTemperatureUtil.h"
 
 #define DOOR_BTN_PIN 0
@@ -23,6 +25,8 @@
 
 StateManager state = StateManager();
 DisplayManager display = DisplayManager(state);
+InteractivityManager interactivity = InteractivityManager(state);
+DataManager data = DataManager(state);
 PotTemperatureUtil potUtil = PotTemperatureUtil((float) ADC_MAX_VAL);
 
 
@@ -73,6 +77,10 @@ void initButtons() {
 
     attachInterrupt(DOOR_BTN_PIN, onChangeDoorButton, CHANGE);
     attachInterrupt(WINDOW_BTN_PIN, onChangeWindowButton, CHANGE);
+
+    // initialise states
+    onChangeDoorButton();
+    onChangeWindowButton();
 }
 
 void initPot() {
@@ -125,12 +133,17 @@ void handleLightSensor() {
 void handleTempSensor() {
     float temperature = bmp.readTemperature();
     state.setTemperature(temperature);
+
+    if (state.getTempState() == StateManager::TEMP_STATE::MAJOR_DIFFERENCE) {
+        if (state.getTrueTemperature() > state.getConfiguredTemperatue()) {
+            interactivity.openWindow();
+        } else {
+            interactivity.closeWindow();
+        }
+    }
 }
 
 void handleCapSense(unsigned long timestampNow) {
-    // TODO: needs to be updated to 1M Ohm resistor IRL
-    // long total = capSensor.capacitiveSensor(CAPSENSE_SAMPLES_NR);
-    // Serial.printf("Capsense: %d\n", total);
 
     uint16_t ReadTouchVal = 0;
 
@@ -141,6 +154,18 @@ void handleCapSense(unsigned long timestampNow) {
     touch_pad_read_filtered(TOUCH_PAD_NUM7, &ReadTouchVal);
     //Serial.println(ReadTouchVal);
 
-    Serial.printf("touch val: %d\n", ReadTouchVal);
     state.updateCapsenseWaterTap(ReadTouchVal, timestampNow);
+
+    // TODO: soil moisture level
+    bool soilMoistureTooWet = false;
+    bool soilMoistureTooDry = false;
+    bool soilMoistureOk = true;
+    
+    if (soilMoistureOk && state.isWaterRunning()) {
+        interactivity.closeWaterTap();
+    } else if (soilMoistureTooDry) {
+        interactivity.openWaterTap();
+    } else if (soilMoistureTooWet) {
+        interactivity.closeWaterTap();
+    }
 }
