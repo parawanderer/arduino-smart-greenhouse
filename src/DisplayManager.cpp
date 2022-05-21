@@ -37,4 +37,15 @@ void DisplayManager::updateScreenData() {
     } else {
         this->m_tft.drawXBitmap(WINDOW_ICON_X, WINDOW_ICON_Y, WINDOW_CLOSED_ICON_BITS, WINDOW_CLOSED_ICON_WIDTH, WINDOW_CLOSED_ICON_HEIGHT, TFT_DARKGREY, TFT_BLACK);
     }
+
+    // temp
+    this->m_tft.setCursor(5, DOOR_OPEN_ICON_HEIGHT + 5, 2);
+    this->m_tft.setTextColor(TFT_YELLOW, TFT_BLACK);
+    this->m_tft.setTextSize(1);
+
+    // there is unfortunately no support for the degree icon so we will draw a circle instead
+    int configuredTemp = this->m_stateManager.getConfiguredTemperatue();
+    this->m_tft.printf("TARGET: %d C  ", configuredTemp);
+    int offset = configuredTemp > 9 ? 80 : 73;
+    this->m_tft.drawCircle(offset, DOOR_OPEN_ICON_HEIGHT + 8, 2, TFT_YELLOW);
 }
