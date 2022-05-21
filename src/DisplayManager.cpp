@@ -3,11 +3,33 @@
 // resolution
 // 135X240
 
+#define DOOR_ICON_SHARED_WIDTH DOOR_OPEN_ICON_WIDTH
+#define DOOR_ICON_SHARED_HEIGHT DOOR_OPEN_ICON_HEIGHT
+
+#define WINDOW_ICON_SHARED_WIDTH WINDOW_OPEN_ICON_WIDTH
+#define WINDOW_ICON_SHARED_HEIGHT WINDOW_OPEN_ICON_HEIGHT
+
+#define LIGHT_ICON_SHARED_WIDTH SUN_ICON_1_WIDTH
+#define LIGHT_ICON_SHARED_HEIGHT SUN_ICON_1_HEIGHT
+
 #define DOOR_ICON_X 0
 #define DOOR_ICON_Y 0
 
-#define WINDOW_ICON_X 25
+#define WINDOW_ICON_X DOOR_OPEN_ICON_WIDTH + 7
 #define WINDOW_ICON_Y 0
+
+#define LIGHT_ICON_X WINDOW_ICON_X + WINDOW_ICON_SHARED_WIDTH + 7
+#define LIGHT_ICON_Y 0
+
+// sun icons map
+const unsigned char* SUN_ICONS[] = {
+    SUN_ICON_6_BITS,
+    SUN_ICON_5_BITS,
+    SUN_ICON_4_BITS,
+    SUN_ICON_3_BITS,
+    SUN_ICON_2_BITS,
+    SUN_ICON_1_BITS
+};
 
 DisplayManager::DisplayManager(StateManager& stateManager): m_stateManager(stateManager) {
 }
@@ -25,18 +47,24 @@ void DisplayManager::initDisplay() {
 }
 
 void DisplayManager::updateScreenData() {
+    // door
+    const unsigned char* ICON = this->m_stateManager.isDoorOpen() ? DOOR_OPEN_ICON_BITS : DOOR_CLOSED_ICON_BITS;
+    this->m_tft.drawXBitmap(DOOR_ICON_X, DOOR_ICON_Y, ICON, DOOR_ICON_SHARED_WIDTH, DOOR_ICON_SHARED_HEIGHT, TFT_WHITE, TFT_BLACK);
 
-    if (this->m_stateManager.isDoorOpen()) {
-        this->m_tft.drawXBitmap(DOOR_ICON_X, DOOR_ICON_Y, DOOR_OPEN_ICON_BITS, DOOR_OPEN_ICON_WIDTH, DOOR_OPEN_ICON_HEIGHT, TFT_WHITE, TFT_BLACK);
-    } else {
-        this->m_tft.drawXBitmap(DOOR_ICON_X, DOOR_ICON_Y, DOOR_CLOSED_ICON_BITS, DOOR_CLOSED_ICON_WIDTH, DOOR_CLOSED_ICON_HEIGHT, TFT_DARKGREY, TFT_BLACK);
-    }
+    // window
+    ICON = this->m_stateManager.isWindowOpen() ? WINDOW_OPEN_ICON_BITS : WINDOW_CLOSED_ICON_BITS;
+    this->m_tft.drawXBitmap(WINDOW_ICON_X, WINDOW_ICON_Y, ICON, WINDOW_ICON_SHARED_WIDTH, WINDOW_ICON_SHARED_HEIGHT, TFT_WHITE, TFT_BLACK);
 
-    if (this->m_stateManager.isWindowOpen()) {
-        this->m_tft.drawXBitmap(WINDOW_ICON_X, WINDOW_ICON_Y, WINDOW_OPEN_ICON_BITS, WINDOW_OPEN_ICON_WIDTH, WINDOW_OPEN_ICON_HEIGHT, TFT_WHITE, TFT_BLACK);
-    } else {
-        this->m_tft.drawXBitmap(WINDOW_ICON_X, WINDOW_ICON_Y, WINDOW_CLOSED_ICON_BITS, WINDOW_CLOSED_ICON_WIDTH, WINDOW_CLOSED_ICON_HEIGHT, TFT_DARKGREY, TFT_BLACK);
-    }
+    // light level
+    int lightLevel = (int) this->m_stateManager.getLight();
+    this->m_tft.drawXBitmap(
+        LIGHT_ICON_X, 
+        LIGHT_ICON_Y, 
+        SUN_ICONS[lightLevel], 
+        LIGHT_ICON_SHARED_WIDTH, 
+        LIGHT_ICON_SHARED_HEIGHT, 
+        TFT_WHITE, 
+        TFT_BLACK);
 
     // temp
     this->m_tft.setCursor(5, DOOR_OPEN_ICON_HEIGHT + 5, 2);

@@ -7,12 +7,20 @@
 #define DOOR_BTN_PIN 0
 #define WINDOW_BTN_PIN 35
 #define POT_PIN 27
+#define LIGHT_SENSOR_PIN 2
 
-#define POT_MAX_VAL 4095.0
+#define ADC_MAX_VAL 4095
+#define DEBOUNCE_MS 200
+
 
 StateManager state = StateManager();
 DisplayManager display = DisplayManager(state);
-PotTemperatureUtil potUtil = PotTemperatureUtil(POT_MAX_VAL);
+PotTemperatureUtil potUtil = PotTemperatureUtil((float) ADC_MAX_VAL);
+
+
+unsigned long lastClickDoorBtn = 0;
+unsigned long lastClickWindowBtn = 0;
+
 
 void initButtons();
 void initPot();
@@ -21,6 +29,7 @@ void onClickDoorButton();
 void onClickWindowButton();
 
 void handlePot();
+void handleLightSensor();
 
 void setup() {
     display.initDisplay();
@@ -30,8 +39,9 @@ void setup() {
 
 void loop() {
     handlePot();
+    handleLightSensor();
 
-    Serial.printf("Hello. temp: %d\u00B0C \n", state.getConfiguredTemperatue());
+    Serial.printf("Hello. temp: %d\u00B0C   lightVal: %d\n", state.getConfiguredTemperatue(), (int) state.getLight());
     display.updateScreenData();
     delay(100);    
 }
@@ -50,14 +60,32 @@ void initPot() {
     pinMode(POT_PIN, INPUT);
 }
 
+void handleDebounced(unsigned long* lastClickTime, void (*onAllowClick)()) {
+    // ik weet dat het niet fantastisch is om functies zoals millis te gebruiken in interrupt functies
+    unsigned long now = millis();
+    
+    // handle overflow
+    if (now < *lastClickTime) {
+        *lastClickTime = LONG_MAX - *lastClickTime; 
+    }
+
+    if (now - *lastClickTime > DEBOUNCE_MS) {
+        // allow clicking
+        onAllowClick();
+        *lastClickTime = now;
+    }
+}
+
 void onClickDoorButton() {
-    // TODO: debounce
-    state.setDoorOpen(!state.isDoorOpen());
+    handleDebounced(&lastClickDoorBtn, []() {
+        state.setDoorOpen(!state.isDoorOpen());
+    });
 }
 
 void onClickWindowButton() {
-    // TODO: debounce
-    state.setWindowOpen(!state.isWindowOpen());
+    handleDebounced(&lastClickWindowBtn, []() {
+        state.setWindowOpen(!state.isWindowOpen());
+    });
 }
 
 void handlePot() {
@@ -66,3 +94,7 @@ void handlePot() {
     state.setConfiguredTemperature(tempChoice);
 }
 
+void handleLightSensor() {
+    int lightSensorVal = analogRead(LIGHT_SENSOR_PIN);
+    state.setLightRaw(lightSensorVal, ADC_MAX_VAL);
+}
