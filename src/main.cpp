@@ -36,8 +36,8 @@ void initPot();
 void initTempSensor();
 void initCapsense();
 
-void onClickDoorButton();
-void onClickWindowButton();
+void onChangeDoorButton();
+void onChangeWindowButton();
 
 void handlePot();
 void handleLightSensor();
@@ -68,11 +68,11 @@ void loop() {
 
 void initButtons() {
     // buttons
-    pinMode(DOOR_BTN_PIN, INPUT_PULLUP);
-    pinMode(WINDOW_BTN_PIN, INPUT_PULLUP);
+    pinMode(DOOR_BTN_PIN, INPUT);
+    pinMode(WINDOW_BTN_PIN, INPUT);
 
-    attachInterrupt(DOOR_BTN_PIN, onClickDoorButton, RISING);
-    attachInterrupt(WINDOW_BTN_PIN, onClickWindowButton, RISING);
+    attachInterrupt(DOOR_BTN_PIN, onChangeDoorButton, CHANGE);
+    attachInterrupt(WINDOW_BTN_PIN, onChangeWindowButton, CHANGE);
 }
 
 void initPot() {
@@ -101,32 +101,14 @@ void initCapsense() {
     // TODO: "Ruwe vochtigheidsmeting grond"
 }
 
-void handleDebounced(unsigned long* lastClickTime, void (*onAllowClick)()) {
-    // ik weet dat het niet fantastisch is om functies zoals millis te gebruiken in interrupt functies
-    unsigned long now = millis();
-    
-    // handle overflow
-    if (now < *lastClickTime) {
-        *lastClickTime = LONG_MAX - *lastClickTime; 
-    }
-
-    if (now - *lastClickTime > DEBOUNCE_MS) {
-        // allow clicking
-        onAllowClick();
-        *lastClickTime = now;
-    }
+void onChangeDoorButton() {
+    bool notPressed = digitalRead(DOOR_BTN_PIN); // notPressed == open
+    state.setDoorOpen(notPressed);
 }
 
-void onClickDoorButton() {
-    handleDebounced(&lastClickDoorBtn, []() {
-        state.setDoorOpen(!state.isDoorOpen());
-    });
-}
-
-void onClickWindowButton() {
-    handleDebounced(&lastClickWindowBtn, []() {
-        state.setWindowOpen(!state.isWindowOpen());
-    });
+void onChangeWindowButton() {
+    bool notPressed = digitalRead(WINDOW_BTN_PIN); // notPressed == open
+    state.setWindowOpen(notPressed);
 }
 
 void handlePot() {
