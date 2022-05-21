@@ -1,6 +1,10 @@
 #include "StateManager.h"
 
+#include <Arduino.h>
 #include <cmath>
+
+#define TAPWATER_LOWER_LIMIT 2000 // values under this are ignored
+#define TAPWATER_RUNNING_UPPER 5500 // water can be considered running under this limit
 
 StateManager::StateManager() 
 : m_isDoorOpen(false), m_isWindowOpen(false), m_configuredTemperature(0.0), m_temperature(0.0), m_lightIntensity(LIGHTINTENSITY::AVERAGE) {
@@ -20,6 +24,11 @@ int StateManager::getConfiguredTemperatue() const {
 
 float StateManager::getTrueTemperature() const {
     return this->m_temperature;
+}
+
+bool StateManager::isWaterRunning() const {
+    if (this->m_tapWaterCapSenseVal < TAPWATER_LOWER_LIMIT) return false;
+    return this->m_tapWaterCapSenseVal < TAPWATER_RUNNING_UPPER;
 }
 
 StateManager::LIGHTINTENSITY StateManager::getLight() const {
@@ -66,5 +75,10 @@ StateManager* StateManager::setLightRaw(int lightVal, int lightMax) {
 
 StateManager* StateManager::setTemperature(float temp) {
     this->m_temperature = temp;
+    return this;
+}
+
+StateManager* StateManager::updateCapsenseWaterTap(uint16_t measurementVal, unsigned long timestamp) {
+    this->m_tapWaterCapSenseVal = measurementVal;
     return this;
 }

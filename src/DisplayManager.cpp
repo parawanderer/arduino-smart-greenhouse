@@ -12,6 +12,9 @@
 #define LIGHT_ICON_SHARED_WIDTH SUN_ICON_1_WIDTH
 #define LIGHT_ICON_SHARED_HEIGHT SUN_ICON_1_HEIGHT
 
+#define WATER_ICON_SHARED_WIDTH WATER_FLOWING_ICON_WIDTH
+#define WATER_ICON_SHARED_HEIGHT WATER_FLOWING_ICON_HEIGHT
+
 #define DOOR_ICON_X 0
 #define DOOR_ICON_Y 0
 
@@ -20,6 +23,9 @@
 
 #define LIGHT_ICON_X WINDOW_ICON_X + WINDOW_ICON_SHARED_WIDTH + 7
 #define LIGHT_ICON_Y 0
+
+#define WATER_ICON_X LIGHT_ICON_X + LIGHT_ICON_SHARED_WIDTH + 7
+#define WATER_ICON_Y 0
 
 // sun icons map
 const unsigned char* SUN_ICONS[] = {
@@ -50,8 +56,11 @@ void DisplayManager::initDisplay() {
 }
 
 void DisplayManager::updateScreenData() {
+    int color;
+    const unsigned char* ICON;
+
     // door
-    const unsigned char* ICON = this->m_stateManager.isDoorOpen() ? DOOR_OPEN_ICON_BITS : DOOR_CLOSED_ICON_BITS;
+    ICON = this->m_stateManager.isDoorOpen() ? DOOR_OPEN_ICON_BITS : DOOR_CLOSED_ICON_BITS;
     this->m_tft.drawXBitmap(DOOR_ICON_X, DOOR_ICON_Y, ICON, DOOR_ICON_SHARED_WIDTH, DOOR_ICON_SHARED_HEIGHT, TFT_WHITE, TFT_BLACK);
 
 
@@ -71,6 +80,14 @@ void DisplayManager::updateScreenData() {
         TFT_WHITE, 
         TFT_BLACK);
 
+    // water flowing
+    ICON = WATER_NOFLOW_ICON_BITS;
+    color = TFT_WHITE;
+    if (this->m_stateManager.isWaterRunning()) {
+        ICON = WATER_FLOWING_ICON_BITS;
+        color = TFT_SKYBLUE;
+    }
+    this->m_tft.drawXBitmap(WATER_ICON_X, WATER_ICON_Y, ICON, WATER_ICON_SHARED_WIDTH, WATER_ICON_SHARED_HEIGHT, color, TFT_BLACK);
 
     // temp (targetted)
     int offsetTextY = this->m_displayHeight - 55;
@@ -88,7 +105,7 @@ void DisplayManager::updateScreenData() {
     this->m_tft.setCursor(5, offsetTextY, 4);
     StateManager::TEMP_STATE tempState = this->m_stateManager.getTempState();
 
-    int color = tempState == StateManager::TEMP_STATE::OK ? TFT_WHITE : TFT_YELLOW;
+    color = tempState == StateManager::TEMP_STATE::OK ? TFT_WHITE : TFT_YELLOW;
     if (tempState == StateManager::TEMP_STATE::MAJOR_DIFFERENCE) {
         color = TFT_RED;
     }

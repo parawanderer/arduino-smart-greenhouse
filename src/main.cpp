@@ -4,13 +4,15 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP280.h>
 
+#include <driver\touch_pad.h>
+
 #include "StateManager.h"
 #include "DisplayManager.h"
 #include "PotTemperatureUtil.h"
 
 #define DOOR_BTN_PIN 0
 #define WINDOW_BTN_PIN 35
-#define POT_PIN 27
+#define POT_PIN 32
 #define LIGHT_SENSOR_PIN 2
 
 #define ADC_MAX_VAL 4095
@@ -26,13 +28,13 @@ PotTemperatureUtil potUtil = PotTemperatureUtil((float) ADC_MAX_VAL);
 
 Adafruit_BMP280 bmp = Adafruit_BMP280();
 
-
 unsigned long lastClickDoorBtn = 0;
 unsigned long lastClickWindowBtn = 0;
 
 void initButtons();
 void initPot();
 void initTempSensor();
+void initCapsense();
 
 void onClickDoorButton();
 void onClickWindowButton();
@@ -40,6 +42,7 @@ void onClickWindowButton();
 void handlePot();
 void handleLightSensor();
 void handleTempSensor();
+void handleCapSense(unsigned long timestampNow);
 
 void setup() {
     display.initDisplay();
@@ -47,14 +50,18 @@ void setup() {
     initButtons();
     initPot();
     initTempSensor();
+    initCapsense();
 }
 
 void loop() {
+    unsigned long now = millis();
+
     handlePot();
     handleLightSensor();
     handleTempSensor();
+    handleCapSense(now);
 
-    Serial.printf("Hello. targetTemp: %d\u00B0C  light: %d  temp: % 4.2f\u00B0C\n", state.getConfiguredTemperatue(), (int) state.getLight(), state.getTrueTemperature());
+    Serial.printf("targetTemp: %d\u00B0C  light: %d  temp: % 4.2f\u00B0C  waterRunning: %d \n", state.getConfiguredTemperatue(), (int) state.getLight(), state.getTrueTemperature(), (int) state.isWaterRunning());
     display.updateScreenData();
     delay(100);    
 }
@@ -80,6 +87,18 @@ void initTempSensor() {
         Serial.println("Could not find a valid BME280 sensor, check wiring and reboot!");
         while (1) delay(10);
     }
+}
+
+void initCapsense() {
+    touch_pad_init();
+
+    // "Water kraan"
+    touch_pad_config(TOUCH_PAD_NUM7, 0);
+    touch_pad_filter_start(10);
+    touch_pad_set_cnt_mode(TOUCH_PAD_NUM7, TOUCH_PAD_SLOPE_7, TOUCH_PAD_TIE_OPT_LOW);
+    touch_pad_set_voltage(TOUCH_HVOLT_2V4, TOUCH_LVOLT_0V8, TOUCH_HVOLT_ATTEN_1V5);
+
+    // TODO: "Ruwe vochtigheidsmeting grond"
 }
 
 void handleDebounced(unsigned long* lastClickTime, void (*onAllowClick)()) {
@@ -124,4 +143,22 @@ void handleLightSensor() {
 void handleTempSensor() {
     float temperature = bmp.readTemperature();
     state.setTemperature(temperature);
+}
+
+void handleCapSense(unsigned long timestampNow) {
+    // TODO: needs to be updated to 1M Ohm resistor IRL
+    // long total = capSensor.capacitiveSensor(CAPSENSE_SAMPLES_NR);
+    // Serial.printf("Capsense: %d\n", total);
+
+    uint16_t ReadTouchVal = 0;
+
+    // touch_pad_read(TOUCH_PAD_NUM7, &ReadTouchVal);
+    // Serial.print(ReadTouchVal);Serial.write(',');
+
+    //Lees hier de gefilterde touch data
+    touch_pad_read_filtered(TOUCH_PAD_NUM7, &ReadTouchVal);
+    //Serial.println(ReadTouchVal);
+
+    Serial.printf("touch val: %d\n", ReadTouchVal);
+    state.updateCapsenseWaterTap(ReadTouchVal, timestampNow);
 }
