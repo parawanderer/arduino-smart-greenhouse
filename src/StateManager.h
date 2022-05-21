@@ -5,6 +5,7 @@
 
 
 class StateManager {
+    public:
 
     enum class LIGHTINTENSITY {
         NIGHT = 0,
@@ -15,13 +16,20 @@ class StateManager {
         VERY_LIGHT = 5
     };
 
-    public:
+    enum class TEMP_STATE {
+        OK = 0,
+        SLIGHT_DIFFERENCE = 1,
+        MAJOR_DIFFERENCE = 2
+    };
+
         StateManager();
 
         bool isDoorOpen() const;
         bool isWindowOpen() const;
 
         int getConfiguredTemperatue() const;
+        float getTrueTemperature() const;
+        StateManager::TEMP_STATE getTempState() const;
 
         StateManager::LIGHTINTENSITY getLight() const;
         
@@ -29,6 +37,7 @@ class StateManager {
         StateManager* setWindowOpen(bool state);
         StateManager* setConfiguredTemperature(int temperature);
         StateManager* setLightRaw(int lightVal, int lightMax);
+        StateManager* setTemperature(float temp);
 
     private:
         // je zou dit eventueel efficienter kunnen opslaan in een integer met masks. 
@@ -37,6 +46,8 @@ class StateManager {
         bool m_isWindowOpen;
 
         int m_configuredTemperature;
+        
+        float m_temperature; // true temperature
 
         // ook dit zou in een integer kunnen gezet worden
         StateManager::LIGHTINTENSITY m_lightIntensity;
