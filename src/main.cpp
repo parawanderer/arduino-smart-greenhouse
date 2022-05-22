@@ -29,6 +29,9 @@
 #define LIGHT_SENSOR_PIN 2
 #define SERVO_PIN 27
 
+#define CAPSENSE_WATERTAP_TOUCHNUM TOUCH_PAD_NUM4 // GPIO13
+#define CAPSENSE_SOILMOISTURE_TOUCHNUM TOUCH_PAD_NUM5 // GPIO12
+
 #define STEPPER_PIN_1 26
 #define STEPPER_PIN_2 25
 #define STEPPER_PIN_3 33
@@ -65,7 +68,6 @@ void initButtons();
 void initPot();
 void initTempSensor();
 void initCapsense();
-void initInteractivity();
 void initWifi();
 void initWifiTime();
 void initAdafruitIO();
@@ -76,7 +78,7 @@ void onChangeWindowButton();
 void handlePot();
 void handleLightSensor(unsigned long timestampNow);
 void handleTempSensor();
-void handleCapSense(unsigned long timestampNow);
+void handleCapSense();
 void handleAdafruitIO();
 
 void setup() {
@@ -87,7 +89,6 @@ void setup() {
     initPot();
     initTempSensor();
     initCapsense();
-    initInteractivity();
 }
 
 void loop() {
@@ -96,7 +97,7 @@ void loop() {
     handlePot();
     handleLightSensor(now);
     handleTempSensor();
-    handleCapSense(now);
+    handleCapSense();
 
     Serial.printf("targetTemp: %d\u00B0C  light: %d  temp: % 4.2f\u00B0C  waterRunning: %d \n", state.getConfiguredTemperatue(), (int) state.getLight(), state.getTrueTemperature(), (int) state.isWaterRunning());
     display.updateScreenData();
@@ -134,16 +135,16 @@ void initCapsense() {
     touch_pad_init();
 
     // "Water kraan"
-    touch_pad_config(TOUCH_PAD_NUM7, 0);
+    touch_pad_config(CAPSENSE_WATERTAP_TOUCHNUM, 0);
     touch_pad_filter_start(10);
-    touch_pad_set_cnt_mode(TOUCH_PAD_NUM7, TOUCH_PAD_SLOPE_7, TOUCH_PAD_TIE_OPT_LOW);
+    touch_pad_set_cnt_mode(CAPSENSE_WATERTAP_TOUCHNUM, TOUCH_PAD_SLOPE_7, TOUCH_PAD_TIE_OPT_LOW);
     touch_pad_set_voltage(TOUCH_HVOLT_2V4, TOUCH_LVOLT_0V8, TOUCH_HVOLT_ATTEN_1V5);
 
-    // TODO: "Ruwe vochtigheidsmeting grond"
-}
-
-void initInteractivity() {
-    interactivity.closeWindow();
+    // "Ruwe vochtigheidsmeting grond"
+    touch_pad_config(CAPSENSE_SOILMOISTURE_TOUCHNUM, 0);
+    touch_pad_filter_start(10);
+    touch_pad_set_cnt_mode(CAPSENSE_SOILMOISTURE_TOUCHNUM, TOUCH_PAD_SLOPE_7, TOUCH_PAD_TIE_OPT_LOW);
+    touch_pad_set_voltage(TOUCH_HVOLT_2V4, TOUCH_LVOLT_0V8, TOUCH_HVOLT_ATTEN_1V5);
 }
 
 void initWifi() {
@@ -234,28 +235,24 @@ void handleTempSensor() {
     }
 }
 
-void handleCapSense(unsigned long timestampNow) {
-
+void handleCapSense() {
     uint16_t ReadTouchVal = 0;
-
-    // touch_pad_read(TOUCH_PAD_NUM7, &ReadTouchVal);
-    // Serial.print(ReadTouchVal);Serial.write(',');
-
-    //Lees hier de gefilterde touch data
-    touch_pad_read_filtered(TOUCH_PAD_NUM4, &ReadTouchVal);
-
-    state.updateCapsenseWaterTap(ReadTouchVal, timestampNow);
-
-    // TODO: soil moisture level
-    bool soilMoistureTooWet = false;
-    bool soilMoistureTooDry = false;
-    bool soilMoistureOk = true;
     
-    if (soilMoistureOk && state.isWaterRunning()) {
+    touch_pad_read_filtered(CAPSENSE_WATERTAP_TOUCHNUM, &ReadTouchVal);
+    state.updateCapsenseWaterTap(ReadTouchVal);
+
+
+    touch_pad_read_filtered(CAPSENSE_SOILMOISTURE_TOUCHNUM, &ReadTouchVal);
+    Serial.printf("Soil moisture: %d\n", ReadTouchVal);
+    state.updateCapsenseSoilMoisture(ReadTouchVal);
+
+    MOISTURE_LEVEL soilMoisture = state.getSoilMoistureLevel();
+    
+    if (soilMoisture == MOISTURE_LEVEL::OK && state.isWaterRunning()) {
         interactivity.closeWaterTap();
-    } else if (soilMoistureTooDry) {
+    } else if (soilMoisture == MOISTURE_LEVEL::TOO_DRY) {
         interactivity.openWaterTap();
-    } else if (soilMoistureTooWet) {
+    } else if (soilMoisture == MOISTURE_LEVEL::TOO_WET) {
         interactivity.closeWaterTap();
     }
 }

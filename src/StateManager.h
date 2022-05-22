@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include "LIGHTINTENSITY.h"
 #include "TEMP_STATE.h"
+#include "MOISTURE_LEVEL.h"
 
 #define WT_SAMPLES_CNT 1000
 
@@ -20,6 +21,7 @@ class StateManager {
         TEMP_STATE getTempState() const;
 
         LIGHTINTENSITY getLight() const;
+        MOISTURE_LEVEL getSoilMoistureLevel() const;
 
         bool isWaterRunning() const;
         
@@ -28,7 +30,8 @@ class StateManager {
         StateManager* setConfiguredTemperature(int temperature);
         StateManager* setLightRaw(int lightVal, int lightMax);
         StateManager* setTemperature(float temp);
-        StateManager* updateCapsenseWaterTap(uint16_t measurementVal, unsigned long timestamp);
+        StateManager* updateCapsenseWaterTap(uint16_t measurementVal);
+        StateManager* updateCapsenseSoilMoisture(uint16_t measurementVal);
 
 
     private:
@@ -45,6 +48,7 @@ class StateManager {
         LIGHTINTENSITY m_lightIntensity;
 
         uint16_t m_tapWaterCapSenseVal = 0;
+        uint16_t m_soilCapSenseVal = 0;
 };
 
 #endif

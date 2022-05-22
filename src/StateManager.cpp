@@ -6,6 +6,17 @@
 #define TAPWATER_LOWER_LIMIT 2000 // values under this are ignored
 #define TAPWATER_RUNNING_UPPER 5500 // water can be considered running under this limit
 
+
+#define FILTER_CAPSENSE_VALUES_UNDER 2500
+#define FILTER_CAPSENSE_VALUES_OVER  8500
+
+#define SOIL_MOISTURE_TOO_DRY  6300
+#define SOIL_MOISTURE_DRY      5900
+#define SOIL_MOISTURE_OK       5500
+#define SOIL_MOISTURE_WET      5100
+#define SOIL_MOISTURE_TOO_WET  4700
+
+
 StateManager::StateManager() 
 : m_isDoorOpen(false), m_isWindowOpen(false), m_configuredTemperature(0.0), m_temperature(0.0), m_lightIntensity(LIGHTINTENSITY::AVERAGE) {
 }
@@ -51,6 +62,24 @@ TEMP_STATE StateManager::getTempState() const {
     return TEMP_STATE::MAJOR_DIFFERENCE; // very off
 }
 
+MOISTURE_LEVEL StateManager::getSoilMoistureLevel() const {
+    if (this->m_soilCapSenseVal == 0) MOISTURE_LEVEL::OK; // not initialised yet
+
+    if (this->m_soilCapSenseVal >= SOIL_MOISTURE_TOO_DRY)
+        return MOISTURE_LEVEL::TOO_DRY;
+    
+    if (this->m_soilCapSenseVal <= SOIL_MOISTURE_TOO_WET)
+        return MOISTURE_LEVEL::TOO_WET;
+
+    if (this->m_soilCapSenseVal <= SOIL_MOISTURE_WET)
+        return MOISTURE_LEVEL::WET;
+    
+    if (this->m_soilCapSenseVal >= SOIL_MOISTURE_DRY)
+        return MOISTURE_LEVEL::DRY;
+
+    return MOISTURE_LEVEL::OK;
+}
+
 StateManager* StateManager::setDoorOpen(bool state) {
     this->m_isDoorOpen = state;
     return this;
@@ -78,7 +107,14 @@ StateManager* StateManager::setTemperature(float temp) {
     return this;
 }
 
-StateManager* StateManager::updateCapsenseWaterTap(uint16_t measurementVal, unsigned long timestamp) {
+StateManager* StateManager::updateCapsenseWaterTap(uint16_t measurementVal) {
+    if (measurementVal <= FILTER_CAPSENSE_VALUES_UNDER || measurementVal >= FILTER_CAPSENSE_VALUES_OVER) return this;
     this->m_tapWaterCapSenseVal = measurementVal;
+    return this;
+}
+
+StateManager* StateManager::updateCapsenseSoilMoisture(uint16_t measurementVal) {
+    if (measurementVal <= FILTER_CAPSENSE_VALUES_UNDER || measurementVal >= FILTER_CAPSENSE_VALUES_OVER) return this;
+    this->m_soilCapSenseVal = measurementVal;
     return this;
 }

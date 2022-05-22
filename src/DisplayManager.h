@@ -5,7 +5,6 @@
 #include "StateManager.h"
 #include "DataManager.h"
 
-
 class DisplayManager {
     public:
         DisplayManager(StateManager& stateManager, DataManager& dataManager);
@@ -24,6 +23,7 @@ class DisplayManager {
         void drawTargetTemp();
         void drawTrueTemp();
         void drawDaylightHrsHistory();
+        void drawSoilMoisture();
         void drawHistoryItem(const char* weekday, byte lightVal, int offsetX, int offsetY);
         void drawNoHistory(int offsetX, int offsetY);
         int eraseOldHistoryItems(byte historyVal2, byte historyVal3, int offsetTextX, int offsetTextY);

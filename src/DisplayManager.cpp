@@ -35,6 +35,12 @@
 #define LIGHT_HISTORY_ITEMS_WIDTH  LIGHT_HISTORY_ITEM_WIDTH * 3
 #define UNSET_LIGHT_VAL (byte)-1
 
+
+#define COLOR_SAND  (uint16_t) (252 << (5 + 6)) | (238 << 5) | 184  /* 252, 238, 184 */
+#define COLOR_DRY_DIRT  (uint16_t) (227 << (5 + 6)) | (163 << 5) | 59  /* 227, 163, 59 */
+#define COLOR_LIGHTBLUE  (uint16_t) TFT_SKYBLUE  
+#define COLOR_WET_BLUE  (uint16_t) (45 << (5 + 6)) | (87 << 5) | 214  /* 45, 87, 214 */
+
 const unsigned char* SUN_ICONS[] = {
     SUN_ICON_6_BITS,
     SUN_ICON_5_BITS,
@@ -51,6 +57,22 @@ const unsigned char* LIGHT_ICONS_SM[] = {
     LIGHT_HRS_3_BITS,
     LIGHT_HRS_4_BITS,
     LIGHT_HRS_5_BITS
+};
+
+const char* MOISTURE_LVLS_TEXT[] = {
+    "TOO DRY!",
+    "Dry",
+    "Ok",
+    "Wet",
+    "TOO WET!"
+};
+
+uint16_t MOISTURE_LVLS_COLORS[] = {
+    COLOR_DRY_DIRT,
+    COLOR_SAND,
+    TFT_WHITE,
+    COLOR_LIGHTBLUE,
+    COLOR_WET_BLUE,
 };
 
 
@@ -90,6 +112,7 @@ void DisplayManager::updateScreenData() {
     this->drawWaterFlowing();
     this->drawTargetTemp();
     this->drawTrueTemp();
+    this->drawSoilMoisture();
     this->drawDaylightHrsHistory();
 }
 
@@ -111,7 +134,6 @@ void DisplayManager::drawTargetTemp() {
     int offsetTextY = this->m_displayHeight - 50;
     this->m_tft.setCursor(5, offsetTextY, 2);
     this->m_tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-    this->m_tft.setTextSize(1);
 
     int configuredTemp = this->m_stateManager.getConfiguredTemperatue();
     this->m_tft.printf("TARGET: %d C  ", configuredTemp);
@@ -141,6 +163,17 @@ void DisplayManager::drawTrueTemp() {
     } else {
         this->m_tft.fillRect(105, offsetTextY + 1, DANGER_ICON_WIDTH, DANGER_ICON_HEIGHT, TFT_BLACK);
     }
+}
+
+void DisplayManager::drawSoilMoisture() {
+    // soil moisture level
+    int offsetTextY = this->m_displayHeight - 70;
+    this->m_tft.setCursor(5, offsetTextY, 2);
+
+    int soilMoisture = (int) this->m_stateManager.getSoilMoistureLevel();
+
+    this->m_tft.setTextColor(MOISTURE_LVLS_COLORS[soilMoisture], TFT_BLACK);
+    this->m_tft.printf("Soil: %s", MOISTURE_LVLS_TEXT[soilMoisture]);
 }
 
 void DisplayManager::drawDaylightHrsHistory() {
