@@ -14,19 +14,19 @@
 #include "AdafruitIO_Data.h"
 #include "AdafruitIO_Feed.h"
 
-
 #include "StateManager.h"
 #include "DisplayManager.h"
 #include "InteractivityManager.h"
 #include "DataManager.h"
+#include "AdafruitManager.h"
 #include "DebugModeManager.h"
 
 #include "PotTemperatureUtil.h"
 
 #define DOOR_BTN_PIN 0
 #define WINDOW_BTN_PIN 35
-#define POT_PIN 15
-#define LIGHT_SENSOR_PIN 2
+#define POT_PIN 36
+#define LIGHT_SENSOR_PIN 39
 #define SERVO_PIN 27
 
 #define CAPSENSE_WATERTAP_TOUCHNUM TOUCH_PAD_NUM4 // GPIO13
@@ -54,8 +54,9 @@
 
 StateManager state = StateManager();
 InteractivityManager interactivity = InteractivityManager(state, SERVO_PIN, STEPS_PER_REVOLUTION, STEPPER_PIN_1, STEPPER_PIN_2, STEPPER_PIN_3, STEPPER_PIN_4);
-DataManager data = DataManager(io);
+DataManager data = DataManager();
 DisplayManager display = DisplayManager(state, data);
+AdafruitManager adafruit = AdafruitManager(io, state, data);
 DebugModeManager debugMode = DebugModeManager(DOOR_BTN_PIN, WINDOW_BTN_PIN);
 
 PotTemperatureUtil potUtil = PotTemperatureUtil((float) ADC_MAX_VAL);
@@ -70,7 +71,7 @@ void initTempSensor();
 void initCapsense();
 void initWifi();
 void initWifiTime();
-void initAdafruitIO();
+void initCapsenseItem(touch_pad_t touch_num);
 
 void onChangeDoorButton();
 void onChangeWindowButton();
@@ -79,7 +80,13 @@ void handlePot();
 void handleLightSensor(unsigned long timestampNow);
 void handleTempSensor();
 void handleCapSense();
-void handleAdafruitIO();
+void handleAdafruitUIOverrides();
+
+void onOverrideFeed(AdafruitIO_Data *data);
+void onWindowFeed(AdafruitIO_Data *data);
+void onTapFeed(AdafruitIO_Data *data);
+void onTempFeed(AdafruitIO_Data *data);
+
 
 void setup() {
     display.initDisplay();
@@ -89,6 +96,7 @@ void setup() {
     initPot();
     initTempSensor();
     initCapsense();
+    adafruit.init(onOverrideFeed, onWindowFeed, onTapFeed, onTempFeed); // hacky but can't figure out a better way to pass something that matches the right type
 }
 
 void loop() {
@@ -98,10 +106,20 @@ void loop() {
     handleLightSensor(now);
     handleTempSensor();
     handleCapSense();
+    adafruit.handleLoop(now);
+    handleAdafruitUIOverrides();
 
-    Serial.printf("targetTemp: %d\u00B0C  light: %d  temp: % 4.2f\u00B0C  waterRunning: %d \n", state.getConfiguredTemperatue(), (int) state.getLight(), state.getTrueTemperature(), (int) state.isWaterRunning());
+    if (debugMode.isDebugModeEnabled()) {
+        Serial.printf("targetTemp: %d\u00B0C light lvl: %d light: %d temp: % 4.2f\u00B0C waterRunning: %d \n", 
+        state.getConfiguredTemperatue(), 
+        (int) state.getLight(), 
+        state.getLightRaw(),
+        state.getTrueTemperature(), 
+        (int) state.isWaterRunning());
+    }
+
     display.updateScreenData();
-    delay(100);    
+    delay(200);    
 }
 
 void initButtons() {
@@ -135,15 +153,16 @@ void initCapsense() {
     touch_pad_init();
 
     // "Water kraan"
-    touch_pad_config(CAPSENSE_WATERTAP_TOUCHNUM, 0);
-    touch_pad_filter_start(10);
-    touch_pad_set_cnt_mode(CAPSENSE_WATERTAP_TOUCHNUM, TOUCH_PAD_SLOPE_7, TOUCH_PAD_TIE_OPT_LOW);
-    touch_pad_set_voltage(TOUCH_HVOLT_2V4, TOUCH_LVOLT_0V8, TOUCH_HVOLT_ATTEN_1V5);
+    initCapsenseItem(CAPSENSE_WATERTAP_TOUCHNUM);
 
     // "Ruwe vochtigheidsmeting grond"
-    touch_pad_config(CAPSENSE_SOILMOISTURE_TOUCHNUM, 0);
+    initCapsenseItem(CAPSENSE_SOILMOISTURE_TOUCHNUM);
+}
+
+void initCapsenseItem(touch_pad_t touch_num) {
+    touch_pad_config(touch_num, 0);
     touch_pad_filter_start(10);
-    touch_pad_set_cnt_mode(CAPSENSE_SOILMOISTURE_TOUCHNUM, TOUCH_PAD_SLOPE_7, TOUCH_PAD_TIE_OPT_LOW);
+    touch_pad_set_cnt_mode(touch_num, TOUCH_PAD_SLOPE_7, TOUCH_PAD_TIE_OPT_LOW);
     touch_pad_set_voltage(TOUCH_HVOLT_2V4, TOUCH_LVOLT_0V8, TOUCH_HVOLT_ATTEN_1V5);
 }
 
@@ -162,7 +181,6 @@ void initWifi() {
 
     //disconnect WiFi as it's no longer needed
     WiFi.disconnect(true);
-    WiFi.mode(WIFI_OFF);
 }
 
 void initWifiTime() {
@@ -182,19 +200,6 @@ void initWifiTime() {
     data.init(timeinfo, millis());
 }
 
-void initAdafruitIO() {
-    Serial.printf("WIFI - ADAFRUIT.IO: Connecting as %s...\n", IO_USERNAME);
-    io.connect();
-
-    while (io.status() < AIO_CONNECTED) {
-        Serial.print(".");
-        delay(500);
-    }
-    Serial.println("");
-    Serial.println(io.statusText());
-
-}
-
 void onChangeDoorButton() {
     bool notPressed = digitalRead(DOOR_BTN_PIN); // notPressed == open
     state.setDoorOpen(notPressed);
@@ -208,6 +213,8 @@ void onChangeWindowButton() {
 }
 
 void handlePot() {
+    if (adafruit.isOverrideEnabled()) return; // skip updates if overriding
+
     int potValue = analogRead(POT_PIN);
     int tempChoice = potUtil.mapPotValToTemp(potValue);
     state.setConfiguredTemperature(tempChoice);
@@ -218,13 +225,17 @@ void handleLightSensor(unsigned long timestampNow) {
 
     state.setLightRaw(lightSensorVal, ADC_MAX_VAL);
     data.onNewLightValue(timestampNow, state.getLight());
-
-    if (debugMode.isDebugModeEnabled()) data._debugPrintData();
+    
+    if (debugMode.isDebugModeEnabled()) {
+        data._debugPrintData();
+    }
 }
 
 void handleTempSensor() {
     float temperature = bmp.readTemperature();
     state.setTemperature(temperature);
+
+    if (adafruit.isOverrideEnabled()) return; // skip logic if override
 
     if (state.getTempState() == TEMP_STATE::MAJOR_DIFFERENCE) {
         if (state.getTrueTemperature() > state.getConfiguredTemperatue()) {
@@ -247,6 +258,8 @@ void handleCapSense() {
     if (debugMode.isDebugModeEnabled()) Serial.printf("Soil moisture Capacitance: %d\n", ReadTouchVal);
     state.updateCapsenseSoilMoisture(ReadTouchVal);
 
+    if (adafruit.isOverrideEnabled()) return; // skip logic if override
+
     MOISTURE_LEVEL soilMoisture = state.getSoilMoistureLevel();
     
     if (soilMoisture == MOISTURE_LEVEL::OK && state.isWaterRunning()) {
@@ -258,10 +271,48 @@ void handleCapSense() {
     }
 }
 
-void handleAdafruitIO() {
-    // io.run(); is required for all sketches.
-    // it should always be present at the top of your loop
-    // function. it keeps the client connected to
-    // io.adafruit.com, and processes any incoming data.
-    io.run();
+void handleAdafruitUIOverrides() {
+    if (!adafruit.isOverrideEnabled()) return;
+
+    if (adafruit.getOverrideOpenTap() && !state.isWaterRunning()) {
+
+        if (debugMode.isDebugModeEnabled()) Serial.println("Adafruit.IO Overrule: Opening Water Tap...");
+        interactivity.openWaterTap();
+
+    } else if (!adafruit.getOverrideOpenTap() && state.isWaterRunning()) {
+
+        if (debugMode.isDebugModeEnabled()) Serial.println("Adafruit.IO Overrule: Closing Water Tap...");
+        interactivity.closeWaterTap();
+    }
+
+    if (adafruit.getOverrideOpenWindow() && !state.isWindowOpen()) {
+        
+        if (debugMode.isDebugModeEnabled()) Serial.println("Adafruit.IO Overrule: Opening Window...");
+        interactivity.openWindow();
+
+    } else if (!adafruit.getOverrideOpenWindow() && state.isWindowOpen()) {
+
+        if (debugMode.isDebugModeEnabled()) Serial.println("Adafruit.IO Overrule: Opening Window...");
+        interactivity.closeWindow();
+    }
+
+    int conversionVal = potUtil.convertToWithinLimit(adafruit.getOverrideConfigureTemp());
+    if (debugMode.isDebugModeEnabled()) Serial.printf("Adafruit.IO Overrule: Setting temperature target to %d\u00B0C...\n", conversionVal);
+    state.setConfiguredTemperature(conversionVal);
+}
+
+void onOverrideFeed(AdafruitIO_Data *data) {
+    adafruit.handleOverrideEnableFeed(data);
+}
+
+void onWindowFeed(AdafruitIO_Data *data) {
+    adafruit.handleOverrideWindowFeed(data);
+}
+
+void onTapFeed(AdafruitIO_Data *data) {
+    adafruit.handleOverrideTapFeed(data);
+}
+
+void onTempFeed(AdafruitIO_Data *data) {
+    adafruit.handleOverrideTempFeed(data);
 }

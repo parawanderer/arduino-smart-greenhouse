@@ -1,7 +1,5 @@
 #ifndef DATAMANAGER_H
 #define DATAMANAGER_H
-#include "AdafruitIO_WiFi.h"
-
 #include "LinkedList.h"
 #include "StateManager.h"
 
@@ -16,7 +14,7 @@ struct HistoryData {
 
 class DataManager {
     public:
-        DataManager(AdafruitIO& io);
+        DataManager();
 
         void init(struct tm baseTime, unsigned long msSinceStartup);
 
@@ -26,8 +24,6 @@ class DataManager {
         void _debugPrintData();
 
     private:
-        AdafruitIO& m_io;
-
         struct tm m_baseTime;
         unsigned long m_lastProcessedTimestamp = 0;
 

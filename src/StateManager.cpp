@@ -46,6 +46,10 @@ LIGHTINTENSITY StateManager::getLight() const {
     return this->m_lightIntensity;
 }
 
+int StateManager::getLightRaw() const {
+    return this->m_lightIntensityRaw;
+}
+
 TEMP_STATE StateManager::getTempState() const {
     float diff = std::abs(((float) this->m_configuredTemperature) - this->m_temperature);
 
@@ -98,6 +102,7 @@ StateManager* StateManager::setConfiguredTemperature(int temperature) {
 
 StateManager* StateManager::setLightRaw(int lightVal, int lightMax) {
     int target = (lightVal / (float) lightMax) * 6.0;
+    this->m_lightIntensityRaw = lightVal;
     this->m_lightIntensity = static_cast<LIGHTINTENSITY>(target);
     return this;
 }

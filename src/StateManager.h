@@ -21,6 +21,7 @@ class StateManager {
         TEMP_STATE getTempState() const;
 
         LIGHTINTENSITY getLight() const;
+        int getLightRaw() const;
         MOISTURE_LEVEL getSoilMoistureLevel() const;
 
         bool isWaterRunning() const;
@@ -44,6 +45,8 @@ class StateManager {
         
         float m_temperature; // true temperature
 
+
+        int m_lightIntensityRaw = 0;
         // ook dit zou in een integer kunnen gezet worden
         LIGHTINTENSITY m_lightIntensity;
 

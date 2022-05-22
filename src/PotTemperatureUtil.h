@@ -10,6 +10,8 @@ class PotTemperatureUtil {
         PotTemperatureUtil(float maxVal);
 
         int mapPotValToTemp(int potVal);
+
+        int convertToWithinLimit(int value);
     private:
         float m_potMaxVal;
         float m_tempInterval;

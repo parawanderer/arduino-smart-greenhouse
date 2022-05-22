@@ -20,7 +20,7 @@ const char* WEEKDAYS[] = {
 };
 
 
-DataManager::DataManager(AdafruitIO& io) : m_io(io) 
+DataManager::DataManager()
 {
     for (int i = 0; i < HR_IN_DAY; ++i) {
         this->m_dayLightAverages[i] = -1;
