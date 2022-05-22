@@ -71,42 +71,48 @@ void DisplayManager::updateScreenData() {
 
     // light level
     int lightLevel = (int) this->m_stateManager.getLight();
-    this->m_tft.drawXBitmap(
-        LIGHT_ICON_X, 
-        LIGHT_ICON_Y, 
-        SUN_ICONS[lightLevel], 
-        LIGHT_ICON_SHARED_WIDTH, 
-        LIGHT_ICON_SHARED_HEIGHT, 
-        TFT_WHITE, 
-        TFT_BLACK);
+    this->m_tft.drawXBitmap(LIGHT_ICON_X, LIGHT_ICON_Y, SUN_ICONS[lightLevel], LIGHT_ICON_SHARED_WIDTH, LIGHT_ICON_SHARED_HEIGHT, TFT_WHITE, TFT_BLACK);
 
+    this->drawWaterFlowing();
+    this->drawTargetTemp();
+    this->drawTrueTemp();
+}
+
+void DisplayManager::drawWaterFlowing() {
     // water flowing
-    ICON = WATER_NOFLOW_ICON_BITS;
-    color = TFT_WHITE;
+    const unsigned char* ICON = WATER_NOFLOW_ICON_BITS;
+    int color = TFT_WHITE;
+
     if (this->m_stateManager.isWaterRunning()) {
         ICON = WATER_FLOWING_ICON_BITS;
         color = TFT_SKYBLUE;
     }
+    
     this->m_tft.drawXBitmap(WATER_ICON_X, WATER_ICON_Y, ICON, WATER_ICON_SHARED_WIDTH, WATER_ICON_SHARED_HEIGHT, color, TFT_BLACK);
+}
 
+void DisplayManager::drawTargetTemp() {
     // temp (targetted)
     int offsetTextY = this->m_displayHeight - 55;
     this->m_tft.setCursor(5, offsetTextY, 2);
     this->m_tft.setTextColor(TFT_YELLOW, TFT_BLACK);
     this->m_tft.setTextSize(1);
+
     int configuredTemp = this->m_stateManager.getConfiguredTemperatue();
     this->m_tft.printf("TARGET: %d C  ", configuredTemp);
+
     int offset = configuredTemp > 9 ? 80 : 73;
     this->m_tft.drawCircle(offset, offsetTextY + 3, 2, TFT_YELLOW); // there is unfortunately no support for the degree icon so we will draw a circle instead
+}
 
-
+void DisplayManager::drawTrueTemp() {
     // temp (actual)
-    offsetTextY = this->m_displayHeight - 30;
+    int offsetTextY = this->m_displayHeight - 30;
     this->m_tft.setCursor(5, offsetTextY, 4);
-    StateManager::TEMP_STATE tempState = this->m_stateManager.getTempState();
+    TEMP_STATE tempState = this->m_stateManager.getTempState();
 
-    color = tempState == StateManager::TEMP_STATE::OK ? TFT_WHITE : TFT_YELLOW;
-    if (tempState == StateManager::TEMP_STATE::MAJOR_DIFFERENCE) {
+    int color = tempState == TEMP_STATE::OK ? TFT_WHITE : TFT_YELLOW;
+    if (tempState == TEMP_STATE::MAJOR_DIFFERENCE) {
         color = TFT_RED;
     }
 
@@ -116,7 +122,7 @@ void DisplayManager::updateScreenData() {
     this->m_tft.printf("% 4.2f  C", trueTemp);
     this->m_tft.drawCircle(78, offsetTextY + 4, 4, color); // there is unfortunately no support for the degree icon so we will draw a circle instead
 
-    if (tempState == StateManager::TEMP_STATE::MAJOR_DIFFERENCE) {
+    if (tempState == TEMP_STATE::MAJOR_DIFFERENCE) {
         this->m_tft.drawXBitmap(105, offsetTextY + 1, DANGER_ICON_BITS, DANGER_ICON_WIDTH, DANGER_ICON_HEIGHT, TFT_RED, TFT_BLACK);
     } else {
         this->m_tft.fillRect(105, offsetTextY + 1, DANGER_ICON_WIDTH, DANGER_ICON_HEIGHT, TFT_BLACK);

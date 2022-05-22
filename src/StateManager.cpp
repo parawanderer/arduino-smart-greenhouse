@@ -31,11 +31,11 @@ bool StateManager::isWaterRunning() const {
     return this->m_tapWaterCapSenseVal < TAPWATER_RUNNING_UPPER;
 }
 
-StateManager::LIGHTINTENSITY StateManager::getLight() const {
+LIGHTINTENSITY StateManager::getLight() const {
     return this->m_lightIntensity;
 }
 
-StateManager::TEMP_STATE StateManager::getTempState() const {
+TEMP_STATE StateManager::getTempState() const {
     float diff = std::abs(((float) this->m_configuredTemperature) - this->m_temperature);
 
     if (diff < 2.0) {

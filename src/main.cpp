@@ -1,10 +1,19 @@
 #include <Arduino.h>
+#include <WiFi.h>
 
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP280.h>
 
 #include <driver\touch_pad.h>
+
+#include "Credentials.h"
+#include "config.h"
+
+#include "AdafruitIO_WiFi.h"
+#include "AdafruitIO_Data.h"
+#include "AdafruitIO_Feed.h"
+
 
 #include "StateManager.h"
 #include "DisplayManager.h"
@@ -24,11 +33,17 @@
 #define SEALEVELPRESSURE_HPA (1013.25)
 
 
+// time server setup
+#define NTP_SERVER "0.be.pool.ntp.org"
+#define GMT_OFFSET_SEC 0
+#define DAYLIGHT_OFFSET_SEC 3600
+#define TIME_CORRECTION_HOURS 1 // we need GMT + 1 for belgium
+
 
 StateManager state = StateManager();
 DisplayManager display = DisplayManager(state);
 InteractivityManager interactivity = InteractivityManager(state);
-DataManager data = DataManager(state);
+DataManager data = DataManager(state, io);
 PotTemperatureUtil potUtil = PotTemperatureUtil((float) ADC_MAX_VAL);
 
 
@@ -42,18 +57,23 @@ void initButtons();
 void initPot();
 void initTempSensor();
 void initCapsense();
+void initWifi();
+void initWifiTime();
+void initAdafruitIO();
 
 void onChangeDoorButton();
 void onChangeWindowButton();
 
 void handlePot();
-void handleLightSensor();
+void handleLightSensor(unsigned long timestampNow);
 void handleTempSensor();
 void handleCapSense(unsigned long timestampNow);
+void handleAdafruitIO();
 
 void setup() {
     display.initDisplay();
     Serial.begin(115200);
+    initWifi();
     initButtons();
     initPot();
     initTempSensor();
@@ -64,7 +84,7 @@ void loop() {
     unsigned long now = millis();
 
     handlePot();
-    handleLightSensor();
+    handleLightSensor(now);
     handleTempSensor();
     handleCapSense(now);
 
@@ -112,8 +132,58 @@ void initCapsense() {
     // TODO: "Ruwe vochtigheidsmeting grond"
 }
 
+void initWifi() {
+    Serial.printf("WIFI: Connecting to %s...\n", WIFI_SSID);
+    WiFi.begin(WIFI_SSID, WIFI_PW);
+
+    while (WiFi.status() != WL_CONNECTED) {
+        Serial.print(".");
+        delay(500);
+    }
+    Serial.println("");
+    Serial.println("WiFi connected.");
+
+    initWifiTime();
+
+    //disconnect WiFi as it's no longer needed
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+}
+
+void initWifiTime() {
+    // time setup
+    configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, NTP_SERVER);
+
+    struct tm timeinfo;
+    if(!getLocalTime(&timeinfo)){
+        Serial.println("Failed to obtain time");
+        return;
+    }
+
+    // we need to correct the time for the Belgian GMT+1 timezone
+    timeinfo.tm_hour += TIME_CORRECTION_HOURS;
+    mktime(&timeinfo);
+
+    data.init(timeinfo, millis());
+}
+
+void initAdafruitIO() {
+    Serial.printf("WIFI - ADAFRUIT.IO: Connecting as %s...\n", IO_USERNAME);
+    io.connect();
+
+    while (io.status() < AIO_CONNECTED) {
+        Serial.print(".");
+        delay(500);
+    }
+    Serial.println("");
+    Serial.println(io.statusText());
+
+}
+
 void onChangeDoorButton() {
     bool notPressed = digitalRead(DOOR_BTN_PIN); // notPressed == open
+    Serial.print("notPressed: ");
+    Serial.println(notPressed);
     state.setDoorOpen(notPressed);
 }
 
@@ -128,16 +198,17 @@ void handlePot() {
     state.setConfiguredTemperature(tempChoice);
 }
 
-void handleLightSensor() {
+void handleLightSensor(unsigned long timestampNow) {
     int lightSensorVal = analogRead(LIGHT_SENSOR_PIN);
     state.setLightRaw(lightSensorVal, ADC_MAX_VAL);
+    data.onNewLightValue(timestampNow);
 }
 
 void handleTempSensor() {
     float temperature = bmp.readTemperature();
     state.setTemperature(temperature);
 
-    if (state.getTempState() == StateManager::TEMP_STATE::MAJOR_DIFFERENCE) {
+    if (state.getTempState() == TEMP_STATE::MAJOR_DIFFERENCE) {
         if (state.getTrueTemperature() > state.getConfiguredTemperatue()) {
             interactivity.openWindow();
         } else {
@@ -155,7 +226,6 @@ void handleCapSense(unsigned long timestampNow) {
 
     //Lees hier de gefilterde touch data
     touch_pad_read_filtered(TOUCH_PAD_NUM7, &ReadTouchVal);
-    //Serial.println(ReadTouchVal);
 
     state.updateCapsenseWaterTap(ReadTouchVal, timestampNow);
 
@@ -171,4 +241,12 @@ void handleCapSense(unsigned long timestampNow) {
     } else if (soilMoistureTooWet) {
         interactivity.closeWaterTap();
     }
+}
+
+void handleAdafruitIO() {
+    // io.run(); is required for all sketches.
+    // it should always be present at the top of your loop
+    // function. it keeps the client connected to
+    // io.adafruit.com, and processes any incoming data.
+    io.run();
 }

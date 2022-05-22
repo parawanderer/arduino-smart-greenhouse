@@ -17,6 +17,10 @@ class DisplayManager {
         StateManager& m_stateManager;
         int m_displayWidth;
         int m_displayHeight;
+
+        void drawWaterFlowing();
+        void drawTargetTemp();
+        void drawTrueTemp();
 };
 
 
