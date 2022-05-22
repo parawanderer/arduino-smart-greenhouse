@@ -2,7 +2,7 @@
 #define POTTEMPERATUREUTIL_H
 
 // https://www.houseplantsexpert.com/indoor-plants-temperature-guide.html#:~:text=Temperature%20too%20high%3A%20Above%2075,growth%20without%20confining%20the%20heat.
-#define MAX_TEMP 27.0
+#define MAX_TEMP  30.0  // 27.0
 #define MIN_TEMP 7.0
 
 class PotTemperatureUtil {

@@ -27,6 +27,7 @@
 #define WINDOW_BTN_PIN 35
 #define POT_PIN 32
 #define LIGHT_SENSOR_PIN 2
+#define SERVO_PIN 15
 
 #define ADC_MAX_VAL 4095
 #define DEBOUNCE_MS 200
@@ -43,7 +44,7 @@
 
 
 StateManager state = StateManager();
-InteractivityManager interactivity = InteractivityManager(state);
+InteractivityManager interactivity = InteractivityManager(state, SERVO_PIN);
 DataManager data = DataManager(io);
 DisplayManager display = DisplayManager(state, data);
 DebugModeManager debugMode = DebugModeManager(DOOR_BTN_PIN, WINDOW_BTN_PIN);
@@ -58,6 +59,7 @@ void initButtons();
 void initPot();
 void initTempSensor();
 void initCapsense();
+void initInteractivity();
 void initWifi();
 void initWifiTime();
 void initAdafruitIO();
@@ -79,6 +81,7 @@ void setup() {
     initPot();
     initTempSensor();
     initCapsense();
+    initInteractivity();
 }
 
 void loop() {
@@ -131,6 +134,10 @@ void initCapsense() {
     touch_pad_set_voltage(TOUCH_HVOLT_2V4, TOUCH_LVOLT_0V8, TOUCH_HVOLT_ATTEN_1V5);
 
     // TODO: "Ruwe vochtigheidsmeting grond"
+}
+
+void initInteractivity() {
+    interactivity.closeWindow();
 }
 
 void initWifi() {
@@ -229,7 +236,7 @@ void handleCapSense(unsigned long timestampNow) {
     // Serial.print(ReadTouchVal);Serial.write(',');
 
     //Lees hier de gefilterde touch data
-    touch_pad_read_filtered(TOUCH_PAD_NUM7, &ReadTouchVal);
+    touch_pad_read_filtered(TOUCH_PAD_NUM4, &ReadTouchVal);
 
     state.updateCapsenseWaterTap(ReadTouchVal, timestampNow);
 
