@@ -25,12 +25,18 @@
 
 #define DOOR_BTN_PIN 0
 #define WINDOW_BTN_PIN 35
-#define POT_PIN 32
+#define POT_PIN 15
 #define LIGHT_SENSOR_PIN 2
-#define SERVO_PIN 15
+#define SERVO_PIN 27
+
+#define STEPPER_PIN_1 26
+#define STEPPER_PIN_2 25
+#define STEPPER_PIN_3 33
+#define STEPPER_PIN_4 32
+#define STEPS_PER_REVOLUTION 2038
+
 
 #define ADC_MAX_VAL 4095
-#define DEBOUNCE_MS 200
 
 // for Adafruit_BMP280
 #define SEALEVELPRESSURE_HPA (1013.25)
@@ -44,7 +50,7 @@
 
 
 StateManager state = StateManager();
-InteractivityManager interactivity = InteractivityManager(state, SERVO_PIN);
+InteractivityManager interactivity = InteractivityManager(state, SERVO_PIN, STEPS_PER_REVOLUTION, STEPPER_PIN_1, STEPPER_PIN_2, STEPPER_PIN_3, STEPPER_PIN_4);
 DataManager data = DataManager(io);
 DisplayManager display = DisplayManager(state, data);
 DebugModeManager debugMode = DebugModeManager(DOOR_BTN_PIN, WINDOW_BTN_PIN);
