@@ -4,7 +4,7 @@
 #define SERVO_WINDOW_OPEN 60
 #define SERVO_WINDOW_CLOSED 30
 
-#define STEPPER_RPM 16
+#define STEPPER_RPM 8
 
 InteractivityManager::InteractivityManager(StateManager& stateManager, int servoPin, int stepsPerRevolution, int stepperPin1, int stepperPin2, int stepperPin3, int stepperPin4) 
 :   m_stateManager(stateManager), 

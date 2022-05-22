@@ -4,7 +4,7 @@
 #include <cmath>
 
 #define TAPWATER_LOWER_LIMIT 2000 // values under this are ignored
-#define TAPWATER_RUNNING_UPPER 5500 // water can be considered running under this limit
+#define TAPWATER_RUNNING_UPPER 6300 // water can be considered running under this limit
 
 
 #define FILTER_CAPSENSE_VALUES_UNDER 2500

@@ -173,7 +173,7 @@ void DisplayManager::drawSoilMoisture() {
     int soilMoisture = (int) this->m_stateManager.getSoilMoistureLevel();
 
     this->m_tft.setTextColor(MOISTURE_LVLS_COLORS[soilMoisture], TFT_BLACK);
-    this->m_tft.printf("Soil: %s", MOISTURE_LVLS_TEXT[soilMoisture]);
+    this->m_tft.printf("Soil: %s        ", MOISTURE_LVLS_TEXT[soilMoisture]);
 }
 
 void DisplayManager::drawDaylightHrsHistory() {

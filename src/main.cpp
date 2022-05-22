@@ -237,13 +237,14 @@ void handleTempSensor() {
 
 void handleCapSense() {
     uint16_t ReadTouchVal = 0;
-    
+
     touch_pad_read_filtered(CAPSENSE_WATERTAP_TOUCHNUM, &ReadTouchVal);
+    if (debugMode.isDebugModeEnabled()) Serial.printf("Water Tap Capacitance: %d\n", ReadTouchVal);
     state.updateCapsenseWaterTap(ReadTouchVal);
 
 
     touch_pad_read_filtered(CAPSENSE_SOILMOISTURE_TOUCHNUM, &ReadTouchVal);
-    Serial.printf("Soil moisture: %d\n", ReadTouchVal);
+    if (debugMode.isDebugModeEnabled()) Serial.printf("Soil moisture Capacitance: %d\n", ReadTouchVal);
     state.updateCapsenseSoilMoisture(ReadTouchVal);
 
     MOISTURE_LEVEL soilMoisture = state.getSoilMoistureLevel();
