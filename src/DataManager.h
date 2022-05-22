@@ -6,6 +6,8 @@ class DataManager {
     public:
         DataManager(StateManager& stateManager);
 
+        void init();
+
     private:
         StateManager& m_stateManager;
 };

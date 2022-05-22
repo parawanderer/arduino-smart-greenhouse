@@ -23,11 +23,14 @@
 // for Adafruit_BMP280
 #define SEALEVELPRESSURE_HPA (1013.25)
 
+
+
 StateManager state = StateManager();
 DisplayManager display = DisplayManager(state);
 InteractivityManager interactivity = InteractivityManager(state);
 DataManager data = DataManager(state);
 PotTemperatureUtil potUtil = PotTemperatureUtil((float) ADC_MAX_VAL);
+
 
 
 Adafruit_BMP280 bmp = Adafruit_BMP280();
