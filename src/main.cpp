@@ -19,6 +19,8 @@
 #include "DisplayManager.h"
 #include "InteractivityManager.h"
 #include "DataManager.h"
+#include "DebugModeManager.h"
+
 #include "PotTemperatureUtil.h"
 
 #define DOOR_BTN_PIN 0
@@ -41,17 +43,16 @@
 
 
 StateManager state = StateManager();
-DisplayManager display = DisplayManager(state);
 InteractivityManager interactivity = InteractivityManager(state);
-DataManager data = DataManager(state, io);
-PotTemperatureUtil potUtil = PotTemperatureUtil((float) ADC_MAX_VAL);
+DataManager data = DataManager(io);
+DisplayManager display = DisplayManager(state, data);
+DebugModeManager debugMode = DebugModeManager(DOOR_BTN_PIN, WINDOW_BTN_PIN);
 
+PotTemperatureUtil potUtil = PotTemperatureUtil((float) ADC_MAX_VAL);
 
 
 Adafruit_BMP280 bmp = Adafruit_BMP280();
 
-unsigned long lastClickDoorBtn = 0;
-unsigned long lastClickWindowBtn = 0;
 
 void initButtons();
 void initPot();
@@ -95,8 +96,8 @@ void loop() {
 
 void initButtons() {
     // buttons
-    pinMode(DOOR_BTN_PIN, INPUT_PULLDOWN);
-    pinMode(WINDOW_BTN_PIN, INPUT_PULLDOWN);
+    pinMode(DOOR_BTN_PIN, INPUT_PULLUP);
+    pinMode(WINDOW_BTN_PIN, INPUT_PULLUP);
 
     attachInterrupt(DOOR_BTN_PIN, onChangeDoorButton, CHANGE);
     attachInterrupt(WINDOW_BTN_PIN, onChangeWindowButton, CHANGE);
@@ -182,14 +183,14 @@ void initAdafruitIO() {
 
 void onChangeDoorButton() {
     bool notPressed = digitalRead(DOOR_BTN_PIN); // notPressed == open
-    Serial.print("notPressed: ");
-    Serial.println(notPressed);
     state.setDoorOpen(notPressed);
+    if (!notPressed) debugMode.onButtonPressed(DOOR_BTN_PIN);
 }
 
 void onChangeWindowButton() {
     bool notPressed = digitalRead(WINDOW_BTN_PIN); // notPressed == open
     state.setWindowOpen(notPressed);
+    if (!notPressed) debugMode.onButtonPressed(WINDOW_BTN_PIN);
 }
 
 void handlePot() {
@@ -200,8 +201,11 @@ void handlePot() {
 
 void handleLightSensor(unsigned long timestampNow) {
     int lightSensorVal = analogRead(LIGHT_SENSOR_PIN);
+
     state.setLightRaw(lightSensorVal, ADC_MAX_VAL);
-    data.onNewLightValue(timestampNow);
+    data.onNewLightValue(timestampNow, state.getLight());
+
+    if (debugMode.isDebugModeEnabled()) data._debugPrintData();
 }
 
 void handleTempSensor() {

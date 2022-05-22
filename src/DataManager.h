@@ -5,18 +5,27 @@
 #include "LinkedList.h"
 #include "StateManager.h"
 
+struct HistoryData {
+    byte m_val1;
+    const char* m_weekDay1;
+    byte m_val2;
+    const char* m_weekDay2;
+    byte m_val3;
+    const char* m_weekDay3;
+};
+
 class DataManager {
     public:
-        DataManager(StateManager& stateManager, AdafruitIO& io);
+        DataManager(AdafruitIO& io);
 
         void init(struct tm baseTime, unsigned long msSinceStartup);
 
-        void onNewLightValue(unsigned long timeSinceStartup);
+        void onNewLightValue(unsigned long timeSinceStartup, LIGHTINTENSITY lightIntensity);
+        HistoryData getHistoryLast3Days();
 
         void _debugPrintData();
 
     private:
-        StateManager& m_stateManager;
         AdafruitIO& m_io;
 
         struct tm m_baseTime;
@@ -26,14 +35,14 @@ class DataManager {
         int m_lastHour;
         int m_lastMinute;
 
-        LinkedList<byte> m_2WeekDailyLightHours;
+        LinkedList<byte> m_historyDailyLightHours;
         int m_dayLightAverages[24];
 
         double m_currentHrAvgLight = 0.0;
         int m_nValuesForCurrentHrAvg = 0;
 
         struct tm mapToRealTime(unsigned long timeSinceStartup);
-        void addNew2WeekEntry();
+        void addHistoryEntry();
 };
 
 #endif

@@ -27,7 +27,14 @@
 #define WATER_ICON_X LIGHT_ICON_X + LIGHT_ICON_SHARED_WIDTH + 7
 #define WATER_ICON_Y 0
 
-// sun icons map
+#define LIGHT_ICON_SMALL_SHARED_WIDTH LIGHT_HRS_0_WIDTH
+#define LIGHT_ICON_SMALL_SHARED_HEIGHT LIGHT_HRS_0_HEIGHT
+
+
+#define LIGHT_HISTORY_ITEM_WIDTH   30
+#define LIGHT_HISTORY_ITEMS_WIDTH  LIGHT_HISTORY_ITEM_WIDTH * 3
+#define UNSET_LIGHT_VAL (byte)-1
+
 const unsigned char* SUN_ICONS[] = {
     SUN_ICON_6_BITS,
     SUN_ICON_5_BITS,
@@ -37,9 +44,17 @@ const unsigned char* SUN_ICONS[] = {
     SUN_ICON_1_BITS
 };
 
+const unsigned char* LIGHT_ICONS_SM[] = {
+    LIGHT_HRS_0_BITS,
+    LIGHT_HRS_1_BITS,
+    LIGHT_HRS_2_BITS,
+    LIGHT_HRS_3_BITS,
+    LIGHT_HRS_4_BITS,
+    LIGHT_HRS_5_BITS
+};
 
 
-DisplayManager::DisplayManager(StateManager& stateManager): m_stateManager(stateManager) {
+DisplayManager::DisplayManager(StateManager& stateManager, DataManager& dataManager): m_stateManager(stateManager), m_dataManager(dataManager) {
 }
 
 void DisplayManager::initDisplay() {
@@ -56,7 +71,6 @@ void DisplayManager::initDisplay() {
 }
 
 void DisplayManager::updateScreenData() {
-    int color;
     const unsigned char* ICON;
 
     // door
@@ -76,6 +90,7 @@ void DisplayManager::updateScreenData() {
     this->drawWaterFlowing();
     this->drawTargetTemp();
     this->drawTrueTemp();
+    this->drawDaylightHrsHistory();
 }
 
 void DisplayManager::drawWaterFlowing() {
@@ -93,7 +108,7 @@ void DisplayManager::drawWaterFlowing() {
 
 void DisplayManager::drawTargetTemp() {
     // temp (targetted)
-    int offsetTextY = this->m_displayHeight - 55;
+    int offsetTextY = this->m_displayHeight - 50;
     this->m_tft.setCursor(5, offsetTextY, 2);
     this->m_tft.setTextColor(TFT_YELLOW, TFT_BLACK);
     this->m_tft.setTextSize(1);
@@ -107,7 +122,7 @@ void DisplayManager::drawTargetTemp() {
 
 void DisplayManager::drawTrueTemp() {
     // temp (actual)
-    int offsetTextY = this->m_displayHeight - 30;
+    int offsetTextY = this->m_displayHeight - 25;
     this->m_tft.setCursor(5, offsetTextY, 4);
     TEMP_STATE tempState = this->m_stateManager.getTempState();
 
@@ -117,7 +132,6 @@ void DisplayManager::drawTrueTemp() {
     }
 
     this->m_tft.setTextColor(color, TFT_BLACK);
-    this->m_tft.setTextSize(1);
     float trueTemp = this->m_stateManager.getTrueTemperature();
     this->m_tft.printf("% 4.2f  C", trueTemp);
     this->m_tft.drawCircle(78, offsetTextY + 4, 4, color); // there is unfortunately no support for the degree icon so we will draw a circle instead
@@ -127,4 +141,73 @@ void DisplayManager::drawTrueTemp() {
     } else {
         this->m_tft.fillRect(105, offsetTextY + 1, DANGER_ICON_WIDTH, DANGER_ICON_HEIGHT, TFT_BLACK);
     }
+}
+
+void DisplayManager::drawDaylightHrsHistory() {
+    int offsetTextY = this->m_displayHeight - 50;
+    int offsetTextX = this->m_displayWidth - 70;
+
+    this->m_tft.setCursor(offsetTextX, offsetTextY, 1);
+    this->m_tft.setTextColor(TFT_GOLD, TFT_BLACK);
+    this->m_tft.print("Light Hrs:");
+
+    offsetTextY += 15;
+
+    HistoryData history = this->m_dataManager.getHistoryLast3Days();
+
+    if (history.m_val1 == UNSET_LIGHT_VAL) {
+        this->drawNoHistory(offsetTextX, offsetTextY);
+        return;
+    }
+
+    // determine correct start offset for icons
+    offsetTextX = this->eraseOldHistoryItems(history.m_val2, history.m_val3, offsetTextX, offsetTextY);
+
+    // draw first history item
+    this->drawHistoryItem(history.m_weekDay1, history.m_val1, offsetTextX, offsetTextY);
+
+    if (history.m_val2 == UNSET_LIGHT_VAL) return;
+    offsetTextX += LIGHT_HISTORY_ITEM_WIDTH;
+
+    // draw second history item
+    this->drawHistoryItem(history.m_weekDay2, history.m_val2, offsetTextX, offsetTextY);
+
+    if (history.m_val3 == UNSET_LIGHT_VAL) return;
+    offsetTextX += LIGHT_HISTORY_ITEM_WIDTH;
+
+    // draw third history item
+    this->drawHistoryItem(history.m_weekDay3, history.m_val3, offsetTextX, offsetTextY);
+}
+
+int DisplayManager::eraseOldHistoryItems(byte historyVal2, byte historyVal3, int offsetTextX, int offsetTextY) {
+    // determine correct start offset for icons
+    offsetTextX = this->m_displayWidth - LIGHT_HISTORY_ITEMS_WIDTH;
+    int newOffsetTextX = offsetTextX;
+
+    if (historyVal2 == UNSET_LIGHT_VAL) newOffsetTextX = this->m_displayWidth - LIGHT_HISTORY_ITEM_WIDTH;
+    else if (historyVal3 == UNSET_LIGHT_VAL)  newOffsetTextX = this->m_displayWidth - (LIGHT_HISTORY_ITEM_WIDTH * 2);
+    
+    if (offsetTextX != newOffsetTextX) {
+        // & erase anything old
+        this->m_tft.fillRect(offsetTextX, offsetTextY, newOffsetTextX - offsetTextX, this->m_displayHeight - offsetTextY, TFT_BLACK);
+    }
+
+    return newOffsetTextX;
+}
+
+void DisplayManager::drawHistoryItem(const char* weekday, byte lightVal, int offsetX, int offsetY) {
+    int lightImageIndex = (int) lightVal;
+    if (lightVal < 0 || lightVal > 6) lightVal = 0;
+
+    this->m_tft.setCursor(offsetX, offsetY + LIGHT_ICON_SMALL_SHARED_HEIGHT, 2);
+    this->m_tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    this->m_tft.print(weekday);
+    this->m_tft.drawXBitmap(offsetX + 2, offsetY, LIGHT_ICONS_SM[lightImageIndex], LIGHT_ICON_SMALL_SHARED_WIDTH, LIGHT_ICON_SMALL_SHARED_HEIGHT, TFT_WHITE, TFT_BLACK);
+}
+
+void DisplayManager::drawNoHistory(int offsetX, int offsetY) {
+    // no history
+    this->m_tft.setCursor(offsetX, offsetY, 1);
+    this->m_tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+    this->m_tft.print("No History");
 }

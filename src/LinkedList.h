@@ -19,6 +19,7 @@ class LinkedList {
         T getLast() const;
         void removeFirst();
         int size() const;
+        LinkedListNode<T>* getIterator() const;
 
     private:
         LinkedListNode<T> *m_firstNode = nullptr;  // "front node"
@@ -82,5 +83,11 @@ template <typename T>
 int LinkedList<T>::size() const {
     return this->m_size;
 }
+
+template <typename T>
+LinkedListNode<T>* LinkedList<T>::getIterator() const {
+    return this->m_firstNode;
+}
+
 
 #endif
