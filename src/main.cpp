@@ -95,8 +95,8 @@ void loop() {
 
 void initButtons() {
     // buttons
-    pinMode(DOOR_BTN_PIN, INPUT);
-    pinMode(WINDOW_BTN_PIN, INPUT);
+    pinMode(DOOR_BTN_PIN, INPUT_PULLDOWN);
+    pinMode(WINDOW_BTN_PIN, INPUT_PULLDOWN);
 
     attachInterrupt(DOOR_BTN_PIN, onChangeDoorButton, CHANGE);
     attachInterrupt(WINDOW_BTN_PIN, onChangeWindowButton, CHANGE);
