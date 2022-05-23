@@ -36,10 +36,13 @@
 #define UNSET_LIGHT_VAL (byte)-1
 
 
-#define COLOR_SAND  (uint16_t) (252 << (5 + 6)) | (238 << 5) | 184  /* 252, 238, 184 */
-#define COLOR_DRY_DIRT  (uint16_t) (227 << (5 + 6)) | (163 << 5) | 59  /* 227, 163, 59 */
-#define COLOR_LIGHTBLUE  (uint16_t) TFT_SKYBLUE  
-#define COLOR_WET_BLUE  (uint16_t) (45 << (5 + 6)) | (87 << 5) | 214  /* 45, 87, 214 */
+// https://stackoverflow.com/questions/11471122/rgb888-to-rgb565-bit-shifting
+#define COLOR_FN(r,g,b)     (uint16_t) ((r & 0b11111000) << 8) | ((g & 0b11111100) << 3) | (b >> 3)
+
+#define COLOR_SAND      COLOR_FN(252, 238, 184)  /* 252, 238, 184 */
+#define COLOR_DRY_DIRT  COLOR_FN(227, 163, 59)  /* 227, 163, 59 */
+#define COLOR_LIGHTBLUE (uint16_t) TFT_SKYBLUE  
+#define COLOR_WET_BLUE  COLOR_FN(45, 87, 214)  /* 45, 87, 214 */
 
 const unsigned char* SUN_ICONS[] = {
     SUN_ICON_6_BITS,
@@ -76,7 +79,8 @@ uint16_t MOISTURE_LVLS_COLORS[] = {
 };
 
 
-DisplayManager::DisplayManager(StateManager& stateManager, DataManager& dataManager): m_stateManager(stateManager), m_dataManager(dataManager) {
+DisplayManager::DisplayManager(StateManager& stateManager, DataManager& dataManager, AdafruitManager& adafruit)
+: m_stateManager(stateManager), m_dataManager(dataManager), m_adafruit(adafruit) {
 }
 
 void DisplayManager::initDisplay() {
@@ -87,9 +91,6 @@ void DisplayManager::initDisplay() {
 
     this->m_displayWidth = this->m_tft.width();
     this->m_displayHeight = this->m_tft.height();
-    // this->m_tft.setCursor(30, 0, 4);   //(cursor at 0,0; font 4, println autosets the cursor on the next line)
-    // this->m_tft.setTextColor(TFT_BLACK, TFT_YELLOW); // Textcolor, BackgroundColor; independent of the fillscreen
-    // this->m_tft.println("- Lab 3 - ShiftReg -");    //Print on cursorpos 0,0
 }
 
 void DisplayManager::updateScreenData() {
@@ -113,6 +114,7 @@ void DisplayManager::updateScreenData() {
     this->drawTargetTemp();
     this->drawTrueTemp();
     this->drawSoilMoisture();
+    this->drawOverrideStatus();
     this->drawDaylightHrsHistory();
 }
 
@@ -212,9 +214,24 @@ void DisplayManager::drawDaylightHrsHistory() {
     this->drawHistoryItem(history.m_weekDay3, history.m_val3, offsetTextX, offsetTextY);
 }
 
+void DisplayManager::drawOverrideStatus() {
+    int offsetY = this->m_displayHeight - 90;
+    int offsetX = 5;
+    this->m_tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    this->m_tft.setCursor(offsetX, offsetY, 2);
+
+    this->m_tft.print("IO Override: ");
+    uint16_t color = this->m_adafruit.isOverrideEnabled() ? TFT_GREEN : TFT_RED;
+
+    offsetX += 85;
+    offsetY += 8;
+    this->m_tft.fillCircle(offsetX, offsetY, 5, color);
+}
+
 int DisplayManager::eraseOldHistoryItems(byte historyVal2, byte historyVal3, int offsetTextX, int offsetTextY) {
     // determine correct start offset for icons
     offsetTextX = this->m_displayWidth - LIGHT_HISTORY_ITEMS_WIDTH;
+    this->m_tft.setTextColor(TFT_WHITE, TFT_BLACK);
     int newOffsetTextX = offsetTextX;
 
     if (historyVal2 == UNSET_LIGHT_VAL) newOffsetTextX = this->m_displayWidth - LIGHT_HISTORY_ITEM_WIDTH;

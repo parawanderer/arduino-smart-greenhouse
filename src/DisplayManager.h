@@ -4,10 +4,11 @@
 #include <TFT_eSPI.h>
 #include "StateManager.h"
 #include "DataManager.h"
+#include "AdafruitManager.h"
 
 class DisplayManager {
     public:
-        DisplayManager(StateManager& stateManager, DataManager& dataManager);
+        DisplayManager(StateManager& stateManager, DataManager& dataManager, AdafruitManager& adafruit);
 
         void initDisplay();
         void updateScreenData();
@@ -16,6 +17,7 @@ class DisplayManager {
         TFT_eSPI m_tft;
         StateManager& m_stateManager;
         DataManager& m_dataManager;
+        AdafruitManager& m_adafruit;
         int m_displayWidth;
         int m_displayHeight;
 
@@ -24,6 +26,7 @@ class DisplayManager {
         void drawTrueTemp();
         void drawDaylightHrsHistory();
         void drawSoilMoisture();
+        void drawOverrideStatus();
         void drawHistoryItem(const char* weekday, byte lightVal, int offsetX, int offsetY);
         void drawNoHistory(int offsetX, int offsetY);
         int eraseOldHistoryItems(byte historyVal2, byte historyVal3, int offsetTextX, int offsetTextY);

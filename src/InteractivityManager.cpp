@@ -1,7 +1,7 @@
 #include "InteractivityManager.h"
 #include <Arduino.h>
 
-#define SERVO_WINDOW_OPEN 60
+#define SERVO_WINDOW_OPEN 90
 #define SERVO_WINDOW_CLOSED 30
 
 #define STEPPER_RPM 8

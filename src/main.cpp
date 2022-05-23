@@ -55,8 +55,8 @@
 StateManager state = StateManager();
 InteractivityManager interactivity = InteractivityManager(state, SERVO_PIN, STEPS_PER_REVOLUTION, STEPPER_PIN_1, STEPPER_PIN_2, STEPPER_PIN_3, STEPPER_PIN_4);
 DataManager data = DataManager();
-DisplayManager display = DisplayManager(state, data);
 AdafruitManager adafruit = AdafruitManager(io, state, data);
+DisplayManager display = DisplayManager(state, data, adafruit);
 DebugModeManager debugMode = DebugModeManager(DOOR_BTN_PIN, WINDOW_BTN_PIN);
 
 PotTemperatureUtil potUtil = PotTemperatureUtil((float) ADC_MAX_VAL);
